@@ -43,8 +43,6 @@
   --pad:clamp(18px,4.2vw,72px);
   --maxw:1680px;
 
-  --cursor-x:50vw;
-  --cursor-y:50vh;
 }
 
 *,*::before,*::after{box-sizing:border-box}
@@ -85,6 +83,10 @@ button,input{font:inherit;color:inherit}
   transition:transform .22s ease;
 }
 .skip:focus{transform:translateY(0)}
+.noscript{
+  position:fixed;inset:0;z-index:190;display:grid;place-items:center;background:var(--bg-0);
+  font-family:var(--f-mono);font-size:12px;letter-spacing:.14em;color:var(--lav);text-align:center;padding:24px;
+}
 
 /* ---------- ambient field (no spider webs: pure gradients + grid) ---------- */
 .field{
@@ -310,12 +312,12 @@ button,input{font:inherit;color:inherit}
   display:block;height:100%;background:linear-gradient(90deg,var(--violet),var(--neon));
   transform:scaleX(var(--prog,0));transform-origin:0 50%;
 }
+/* progresso de página — CSS scroll-driven nativo na raiz (onde é correto); fallback JS abaixo */
+.page-prog{position:fixed;top:0;left:0;right:0;height:2px;z-index:70;pointer-events:none}
+.page-prog i{display:block;height:100%;transform:scaleX(var(--pageprog,0));transform-origin:0 50%;
+  background:linear-gradient(90deg,var(--violet),var(--neon));}
 @supports (animation-timeline:scroll()){
-  .hud-bar i{
-    transform:scaleX(0);transform-origin:0 50%;
-    animation:barGrow linear both;
-    animation-timeline:scroll(nearest block);
-  }
+  .page-prog i{animation:barGrow linear both;animation-timeline:scroll(root block);}
   @keyframes barGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 }
 
@@ -630,6 +632,7 @@ input[type=range]::-moz-range-thumb{
 <div class="cursor" id="cursor" aria-hidden="true"><i></i><i></i></div>
 <div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
 
+<div class="page-prog" aria-hidden="true"><i id="pageProgFill"></i></div>
 <header class="hdr">
   <a class="mark" href="#top">RHINO<span>Calibre IMC-Metric · ref. RHO-01</span></a>
   <nav class="nav" aria-label="Navegação principal">
@@ -641,6 +644,7 @@ input[type=range]::-moz-range-thumb{
 </header>
 
 <main id="top">
+<noscript><div class="noscript">O mecanismo do rinoceronte é desenhado em SVG via JavaScript.<br>Ative o JavaScript para desmontar, calibrar e remontar o calibre IMC-METRIC.</div></noscript>
 
   <!-- ============================ HERO ============================ -->
   <section class="hero" aria-labelledby="hero-title">
@@ -1282,6 +1286,10 @@ var depth = $('#stageDepth');
 var ringsOuter = $('#ringOuter'), ringsMid = $('#ringMid'), ringsInner = $('#ringInner');
 var arcFill = $('#arcFill'), needleTip = $('#needleTip'), needleDot = $('#needleDot');
 var coreFx = $('#coreFx');
+var pageProgFill = $('#pageProgFill');
+/* paralaxe diferencial por profundidade de camada (data-layer) */
+var layerNodes = $$('[data-layer]').map(function (el) { return { el: el, k: parseFloat(el.dataset.layer) || 0, cur: '' }; });
+var stats = { frames: 0, renders: 0 };
 
 var hudAsm = $('#hudAsm'), hudImc = $('#hudImc'), hudScroll = $('#hudScroll'),
     hudX = $('#hudX'), hudY = $('#hudY'), hudPar = $('#hudPar'), hudPhaseName = $('#hudPhaseName'),
@@ -1298,6 +1306,9 @@ var PHASES = [
 var S = { asm: 0, ex: 1, load: 0, imc: IMC_MIN, rot: 0, par: 0, mx: 0, my: 0 };
 var T = { asm: 0, ex: 1, load: 0, imc: IMC_MIN, rot: 0, par: 0, mx: 0, my: 0 };
 var lastPhase = -1, lastHud = {};
+var rootMax = 1;
+function measureRoot() { rootMax = Math.max(1, (document.documentElement.scrollHeight || 1) - window.innerHeight); }
+function rootProgress() { return clamp((window.scrollY || window.pageYOffset || 0) / rootMax, 0, 1); }
 var supportsScrollTimeline = !!(window.CSS && window.CSS.supports && window.CSS.supports('animation-timeline', 'scroll()'));
 
 function setTxt(node, v) {
@@ -1305,6 +1316,11 @@ function setTxt(node, v) {
   if (lastHud[key] === v) { return; }
   lastHud[key] = v;
   node.textContent = v;
+}
+
+function setGroupOp(node, v) {
+  var o = v.toFixed(3);
+  if (node._op !== o) { node._op = o; node.setAttribute('opacity', o); }
 }
 
 function render() {
@@ -1340,26 +1356,25 @@ function render() {
             'rotate(' + rot.toFixed(2) + ') scale(' + sx.toFixed(4) + ' ' + sy.toFixed(4) + ') ' +
             'translate(' + (-pn.cx).toFixed(2) + ' ' + (-pn.cy).toFixed(2) + ')';
     if (t !== pn.cur) { pn.node.setAttribute('transform', t); pn.cur = t; }
-    var op = .42 + .58 * asm + load * .06;
-    var opS = op.toFixed(3);
-    if (pn.node.getAttribute('opacity') !== opS) { pn.node.setAttribute('opacity', opS); }
+    var opS = (.42 + .58 * asm + load * .06).toFixed(3);
+    if (pn.op !== opS) { pn.op = opS; pn.node.setAttribute('opacity', opS); }
   }
 
   /* ---- chamadas / cotas / núcleo ---- */
   var cOp = smooth(.10, .58, ex);
-  if (gCallouts.getAttribute('opacity') !== cOp.toFixed(3)) { gCallouts.setAttribute('opacity', cOp.toFixed(3)); }
-  for (var j = 0; j < calloutNodes.length; j++) {
-    var c = calloutNodes[j].c, k2 = ex;
-    var fx = c.from[0] + (c.from[0] - 500) * .12 * k2, fy = c.from[1] + (c.from[1] - 470) * .12 * k2;
-    var tx2 = c.to[0] + (c.to[0] - 500) * .3 * k2, ty2 = c.to[1] + (c.to[1] - 470) * .3 * k2;
-    calloutNodes[j].line.setAttribute('d',
-      'M' + fx.toFixed(1) + ' ' + fy.toFixed(1) + ' L' + tx2.toFixed(1) + ' ' + ty2.toFixed(1) +
-      ' H' + c.ax.toFixed(1));
+  setGroupOp(gCallouts, cOp);
+  if (cOp > 0.001) {
+    for (var j = 0; j < calloutNodes.length; j++) {
+      var c = calloutNodes[j].c, k2 = ex;
+      var fx = c.from[0] + (c.from[0] - 500) * .12 * k2, fy = c.from[1] + (c.from[1] - 470) * .12 * k2;
+      var tx2 = c.to[0] + (c.to[0] - 500) * .3 * k2, ty2 = c.to[1] + (c.to[1] - 470) * .3 * k2;
+      calloutNodes[j].line.setAttribute('d',
+        'M' + fx.toFixed(1) + ' ' + fy.toFixed(1) + ' L' + tx2.toFixed(1) + ' ' + ty2.toFixed(1) +
+        ' H' + c.ax.toFixed(1));
+    }
   }
-  var dOp = smooth(.86, .995, asm) * (1 - load * .85);
-  if (gDims.getAttribute('opacity') !== dOp.toFixed(3)) { gDims.setAttribute('opacity', dOp.toFixed(3)); }
-  var sOp = smooth(.04, .6, load);
-  if (coreFx.getAttribute('opacity') !== sOp.toFixed(3)) { coreFx.setAttribute('opacity', sOp.toFixed(3)); }
+  setGroupOp(gDims, smooth(.86, .995, asm) * (1 - load * .85));
+  setGroupOp(coreFx, smooth(.04, .6, load));
 
   /* ---- paralaxe 3D por profundidade de camada ---- */
   var tiltX = (-S.my * 5.5).toFixed(3), tiltY = (S.mx * 7.5).toFixed(3);
@@ -1368,6 +1383,12 @@ function render() {
   if (depth._t !== dtr) { depth.style.transform = dtr; depth._t = dtr; }
   var str = 'translate3d(' + (S.mx * -22).toFixed(2) + 'px,' + (S.my * -16).toFixed(2) + 'px,0) scale(1.012)';
   if (svg._t !== str) { svg.style.transform = str; svg._t = str; }
+  /* camadas mais próximas reagem mais ao ponteiro (profundidade real) */
+  for (var L = 0; L < layerNodes.length; L++) {
+    var ln = layerNodes[L];
+    var lt = 'translate(' + (S.mx * 16 * ln.k).toFixed(2) + ' ' + (S.my * 12 * ln.k).toFixed(2) + ')';
+    if (ln.cur !== lt) { ln.cur = lt; ln.el.setAttribute('transform', lt); }
+  }
 
   /* ---- HUD ---- */
   /* valor arredondado = o mesmo exibido, para a fase nunca contradizer o mostrador */
@@ -1398,7 +1419,8 @@ function readScroll() {
   T.asm = st.asm;
   T.load = st.load;
   T.rot = p * 118;
-  if (!supportsScrollTimeline) { hudBarFill.style.setProperty('--prog', p.toFixed(4)); }
+  hudBarFill.style.setProperty('--prog', p.toFixed(4));
+  if (!supportsScrollTimeline) { pageProgFill.style.setProperty('--pageprog', rootProgress().toFixed(4)); }
 }
 
 /* cursor + paralaxe de mouse */
@@ -1425,12 +1447,13 @@ var parEls = $$('[data-par]').map(function (el) { return { el: el, k: parseFloat
 /* loop rAF */
 var running = true, csx = 0, csy = 0;
 function frame() {
+  stats.frames++;
   if (REDUCED) {
     readScroll();
     S.asm = T.asm; S.ex = T.ex; S.load = T.load; S.imc = T.imc;
     S.rot = T.rot; S.par = T.par; S.mx = 0; S.my = 0;
     cursor.style.opacity = 0; cursorDot.style.opacity = 0;
-    render();
+    stats.renders++; render();
     return;
   }
   readScroll();
@@ -1447,23 +1470,37 @@ function frame() {
   cursor.style.transform = 'translate3d(' + csx.toFixed(1) + 'px,' + csy.toFixed(1) + 'px,0)';
   cursorDot.style.transform = 'translate3d(' + cx.toFixed(1) + 'px,' + cy.toFixed(1) + 'px,0)';
   var sy = window.scrollY || window.pageYOffset || 0;
-  for (var i = 0; i < parEls.length; i++) {
-    var pe = parEls[i];
-    if (sy < window.innerHeight * 1.2) {
-      pe.el.style.transform = 'translate3d(0,' + (sy * .06 * pe.k).toFixed(2) + 'px,0)';
+  if (sy < window.innerHeight * 1.2) {
+    for (var i = 0; i < parEls.length; i++) {
+      var pe = parEls[i];
+      var ht = 'translate3d(0,' + (sy * .06 * pe.k).toFixed(2) + 'px,0)';
+      if (pe.last !== ht) { pe.last = ht; pe.el.style.transform = ht; }
     }
   }
   setTxt(hudPar, (Math.abs(S.mx * 7.5)).toFixed(1) + '°');
-  render();
+  /* idle-skip: pula o render (a parte cara) quando o estado converge e o ponteiro repousa */
+  var settled =
+    Math.abs(S.asm - T.asm) < 1e-4 && Math.abs(S.ex - T.ex) < 1e-4 &&
+    Math.abs(S.load - T.load) < 1e-4 && Math.abs(S.imc - T.imc) < 1e-3 &&
+    Math.abs(S.rot - T.rot) < 1e-3 && Math.abs(S.par - T.par) < 1e-4 &&
+    Math.abs(S.mx - T.mx) < 2e-3 && Math.abs(S.my - T.my) < 2e-3;
+  if (!settled) { stats.renders++; render(); }
   if (running) { requestAnimationFrame(frame); }
 }
 document.addEventListener('visibilitychange', function () {
   if (document.hidden) { running = false; }
   else if (!running) { running = true; requestAnimationFrame(frame); }
 });
+function staticFrame() {
+  readScroll();
+  S.asm = T.asm; S.ex = T.ex; S.load = T.load; S.imc = T.imc; S.par = T.par; S.rot = T.rot;
+  S.mx = 0; S.my = 0;
+  stats.renders++; render();
+}
+measureRoot();
 readScroll();
 S.asm = T.asm; S.ex = T.ex; S.load = T.load; S.imc = T.imc; S.par = T.par; S.rot = T.rot;
-render();
+stats.renders++; render();
 if (!REDUCED) { requestAnimationFrame(frame); }
 
 /* ----------------------- 4. calculadora --------------------------- */
@@ -1673,7 +1710,14 @@ $$('a[href^="#"]').forEach(function (a) {
 
 /* boot — pinta a bancada a partir dos valores declarados no HTML, sem aplicar snap */
 fromInputs();
-window.addEventListener('resize', function () { readScroll(); }, { passive: true });
+window.addEventListener('resize', function () {
+  measureRoot();
+  readScroll();
+  if (REDUCED) { staticFrame(); }
+}, { passive: true });
+window.addEventListener('scroll', function () {
+  if (REDUCED) { staticFrame(); }
+}, { passive: true });
 
 /* expõe utilitários puros para testes */
 window.RHINO = {
@@ -1682,7 +1726,8 @@ window.RHINO = {
   imcFromAssembly: imcFromAssembly, imcFromLoad: imcFromLoad, invSmooth: invSmooth,
   stageProgressFromImc: stageProgressFromImc, stageFromProgress: stageFromProgress,
   magnetic: magnetic, clamp: clamp, smooth: smooth, lerp: lerp,
-  CATS: CATS, PLATES: PLATES, IMC_MIN: IMC_MIN, IMC_MAX: IMC_MAX, IMC_OK: IMC_OK
+  CATS: CATS, PLATES: PLATES, IMC_MIN: IMC_MIN, IMC_MAX: IMC_MAX, IMC_OK: IMC_OK,
+  stats: stats
 };
 })();
 </script>
