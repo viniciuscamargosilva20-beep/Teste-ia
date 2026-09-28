@@ -1,0 +1,1690 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#08040d" />
+<title>RHINO — Calibre IMC-METRIC · Índice de Massa Corporal</title>
+<meta name="description" content="RHINO — mecanismo scrollytelling de um rinoceronte geométrico em SVG com anéis graduados, calibres e calculadora de Índice de Massa Corporal (IMC) de alta fidelidade." />
+<meta name="color-scheme" content="dark" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@300;400;500;700&family=Plus+Jakarta+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   RHINO · CALIBRE IMC-METRIC
+   Purple minimalism / brutalist-swiss / luxury tech
+   Single file. No dependencies.
+   ============================================================ */
+
+:root{
+  --bg-0:#08040d;
+  --bg-1:#0f071a;
+  --bg-2:#160b26;
+  --bg-3:#1e1033;
+
+  --violet:#7c3aed;
+  --violet-2:#8b5cf6;
+  --lav:#c4b5fd;
+  --lav-dim:#8b7bb8;
+  --ice:#f5f3ff;
+
+  --neon:#e879f9;
+  --rose:#f43f5e;
+
+  --hair:rgba(196,181,253,.16);
+  --hair-2:rgba(196,181,253,.32);
+  --hair-3:rgba(196,181,253,.08);
+
+  --f-display:'Syne','Clash Display',ui-sans-serif,system-ui,sans-serif;
+  --f-mono:'JetBrains Mono','Space Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --f-body:'Plus Jakarta Sans','Bricolage Grotesque',ui-sans-serif,system-ui,sans-serif;
+
+  --pad:clamp(18px,4.2vw,72px);
+  --maxw:1680px;
+
+  --cursor-x:50vw;
+  --cursor-y:50vh;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+html:focus-within{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:var(--bg-0);
+  color:var(--ice);
+  font-family:var(--f-body);
+  font-weight:300;
+  line-height:1.55;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+img,svg{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+button,input{font:inherit;color:inherit}
+::selection{background:var(--neon);color:#12051c}
+
+:focus-visible{
+  outline:2px solid var(--neon);
+  outline-offset:3px;
+  border-radius:2px;
+}
+
+.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;
+}
+.skip{
+  position:fixed;top:8px;left:8px;z-index:200;
+  transform:translateY(-160%);
+  background:var(--bg-2);color:var(--ice);
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;
+  padding:10px 14px;border:1px solid var(--hair-2);
+  transition:transform .22s ease;
+}
+.skip:focus{transform:translateY(0)}
+
+/* ---------- ambient field (no spider webs: pure gradients + grid) ---------- */
+.field{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(124,58,237,.20), transparent 62%),
+    radial-gradient(90% 70% at 88% 108%, rgba(232,121,249,.10), transparent 60%),
+    radial-gradient(70% 60% at 6% 92%, rgba(139,92,246,.12), transparent 62%),
+    linear-gradient(180deg,var(--bg-0),var(--bg-1) 46%,var(--bg-0));
+}
+.field::after{
+  content:"";position:absolute;inset:0;
+  background-image:
+    linear-gradient(to right,var(--hair-3) 1px,transparent 1px),
+    linear-gradient(to bottom,var(--hair-3) 1px,transparent 1px);
+  background-size:72px 72px;
+  mask-image:radial-gradient(120% 90% at 50% 40%,#000 8%,transparent 78%);
+  -webkit-mask-image:radial-gradient(120% 90% at 50% 40%,#000 8%,transparent 78%);
+  opacity:.85;
+}
+.grain{
+  position:fixed;inset:-50%;z-index:1;pointer-events:none;opacity:.045;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.82' numOctaves='3' stitchTiles='stitch'/></filter><rect width='160' height='160' filter='url(%23n)' opacity='.6'/></svg>");
+  mix-blend-mode:screen;
+}
+
+/* ---------- custom precision cursor ---------- */
+.cursor,.cursor-dot{
+  position:fixed;top:0;left:0;z-index:150;pointer-events:none;
+  opacity:0;transition:opacity .3s ease;
+  will-change:transform;
+}
+.cursor{
+  width:34px;height:34px;margin:-17px 0 0 -17px;
+  border:1px solid rgba(196,181,253,.72);border-radius:50%;
+}
+.cursor::before,.cursor::after{
+  content:"";position:absolute;background:var(--neon);
+}
+.cursor::before{left:50%;top:-9px;width:1px;height:7px;transform:translateX(-.5px)}
+.cursor::after{left:50%;bottom:-9px;width:1px;height:7px;transform:translateX(-.5px)}
+.cursor i{
+  position:absolute;top:50%;left:-9px;width:7px;height:1px;background:var(--neon);
+}
+.cursor i:last-child{left:auto;right:-9px}
+.cursor-dot{
+  width:3px;height:3px;margin:-1.5px 0 0 -1.5px;background:var(--ice);border-radius:50%;
+}
+.cursor.is-hot{
+  border-color:var(--neon);
+  transform:scale(1);
+  box-shadow:0 0 0 1px rgba(232,121,249,.22),0 0 26px rgba(232,121,249,.28);
+}
+.cursor.is-hot::before,.cursor.is-hot::after,.cursor.is-hot i{background:var(--ice)}
+@media (hover:none),(pointer:coarse){.cursor,.cursor-dot{display:none}}
+
+/* ---------- header ---------- */
+.hdr{
+  position:fixed;top:0;left:0;right:0;z-index:60;
+  display:flex;align-items:center;gap:18px;
+  padding:14px var(--pad);
+  border-bottom:1px solid var(--hair-3);
+  background:linear-gradient(180deg,rgba(8,4,13,.9),rgba(8,4,13,0));
+  backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
+}
+.mark{
+  display:flex;align-items:baseline;gap:10px;
+  font-family:var(--f-display);font-weight:800;letter-spacing:-.02em;font-size:16px;
+}
+.mark span{
+  font-family:var(--f-mono);font-weight:400;font-size:10px;letter-spacing:.22em;
+  color:var(--lav-dim);text-transform:uppercase;
+}
+.nav{margin-left:auto;display:flex;gap:clamp(10px,2vw,28px);align-items:center}
+.nav a{
+  font-family:var(--f-mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--lav);opacity:.72;transition:opacity .2s,color .2s;position:relative;padding:6px 0;
+}
+.nav a::after{
+  content:"";position:absolute;left:0;right:100%;bottom:2px;height:1px;background:var(--neon);
+  transition:right .28s cubic-bezier(.2,.7,.2,1);
+}
+.nav a:hover{opacity:1;color:var(--ice)}
+.nav a:hover::after{right:0}
+@media (max-width:720px){.nav a:not(.nav-cta){display:none}}
+.nav-cta{
+  border:1px solid var(--hair-2);padding:7px 12px !important;opacity:1 !important;
+  background:rgba(124,58,237,.12);
+}
+.nav-cta:hover{background:rgba(232,121,249,.16)}
+
+/* ---------- shared type ---------- */
+.eyebrow{
+  font-family:var(--f-mono);font-size:10.5px;letter-spacing:.3em;text-transform:uppercase;
+  color:var(--lav-dim);
+}
+.rule{height:1px;background:var(--hair);width:100%}
+.wrap{max-width:var(--maxw);margin:0 auto;padding-inline:var(--pad)}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+.hero{
+  position:relative;z-index:2;
+  min-height:100svh;
+  display:flex;flex-direction:column;justify-content:flex-end;
+  padding:112px var(--pad) 28px;
+}
+.hero-grid{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.62fr);
+  gap:clamp(24px,4vw,72px);align-items:end;
+}
+@media (max-width:900px){.hero-grid{grid-template-columns:1fr}}
+.hero-title{
+  margin:0;
+  font-family:var(--f-display);font-weight:800;
+  font-size:clamp(4.6rem,19.5vw,17.5rem);
+  line-height:.82;letter-spacing:-.055em;
+  text-transform:uppercase;
+  background:linear-gradient(178deg,var(--ice) 12%,#b9a6f5 62%,#6d4fd0 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 60px rgba(124,58,237,.28));
+}
+.hero-title em{
+  display:block;font-style:normal;font-size:.115em;letter-spacing:.34em;
+  font-family:var(--f-mono);font-weight:400;color:var(--lav-dim);
+  -webkit-text-fill-color:var(--lav-dim);margin-top:.9em;
+}
+.hero-side{display:flex;flex-direction:column;gap:18px;padding-bottom:.6rem}
+.hero-lead{
+  font-size:clamp(.94rem,1.15vw,1.06rem);color:#cfc6ea;max-width:46ch;margin:0;
+}
+.hero-lead b{color:var(--ice);font-weight:500}
+.hero-meta{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;
+  background:var(--hair-3);border:1px solid var(--hair-3);
+}
+.hero-meta div{background:var(--bg-0);padding:12px 13px}
+.hero-meta dt{
+  font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;color:var(--lav-dim);
+  text-transform:uppercase;margin:0 0 6px;
+}
+.hero-meta dd{
+  margin:0;font-family:var(--f-mono);font-size:13px;color:var(--ice);letter-spacing:.02em;
+}
+.hero-foot{
+  margin-top:clamp(26px,5vh,54px);
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+}
+.scroll-cue{
+  display:inline-flex;align-items:center;gap:12px;
+  font-family:var(--f-mono);font-size:10px;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--lav);
+}
+.scroll-cue .bar{
+  position:relative;width:clamp(120px,22vw,260px);height:1px;background:var(--hair-2);overflow:hidden;
+}
+.scroll-cue .bar::after{
+  content:"";position:absolute;inset:0 auto 0 0;width:34%;background:var(--neon);
+  animation:cue 2.4s cubic-bezier(.7,0,.3,1) infinite;
+}
+@keyframes cue{0%{transform:translateX(-110%)}100%{transform:translateX(320%)}}
+.hero-tag{
+  margin-left:auto;font-family:var(--f-mono);font-size:10px;letter-spacing:.2em;
+  color:var(--lav-dim);text-transform:uppercase;
+}
+
+/* ============================================================
+   SCROLLYTELLING STAGE
+   ============================================================ */
+.stage{
+  position:relative;z-index:2;
+  height:520vh;
+  background:
+    linear-gradient(180deg,transparent,var(--bg-0) 6%,var(--bg-0) 94%,transparent);
+}
+.stage-sticky{
+  position:sticky;top:0;height:100svh;overflow:hidden;
+  display:grid;place-items:center;
+  perspective:1200px;
+}
+.stage-vignette{
+  position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(72% 62% at 50% 50%,transparent 32%,rgba(8,4,13,.82) 100%);
+}
+.stage-depth{
+  position:relative;width:100%;height:100%;
+  transform-style:preserve-3d;
+  will-change:transform;
+}
+.stage-svg{
+  position:absolute;inset:0;width:100%;height:100%;
+  transform-style:preserve-3d;
+  will-change:transform;
+}
+.plate,.ring,.callout,.dim{will-change:transform,opacity}
+
+/* HUD corners */
+.hud{
+  position:absolute;inset:0;pointer-events:none;
+  font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--lav-dim);
+}
+.hud > *{position:absolute;padding:clamp(12px,2vw,22px);max-width:min(42vw,320px)}
+.hud-tl{top:0;left:0}
+.hud-tr{top:0;right:0;text-align:right}
+.hud-bl{bottom:0;left:0}
+.hud-br{bottom:0;right:0;text-align:right}
+.hud b{display:block;color:var(--ice);font-weight:500;letter-spacing:.1em}
+.hud .val{color:var(--neon)}
+.hud .big{
+  font-family:var(--f-display);font-weight:800;font-size:clamp(1.6rem,3.4vw,2.7rem);
+  letter-spacing:-.03em;color:var(--ice);line-height:1;text-transform:none;
+}
+.hud .big sub{
+  font-family:var(--f-mono);font-size:.24em;font-weight:400;color:var(--lav-dim);
+  letter-spacing:.16em;vertical-align:super;margin-left:.4em;
+}
+.hud-bar{
+  position:absolute;left:0;right:0;top:0;height:1px;background:var(--hair-3);
+}
+.hud-bar i{
+  display:block;height:100%;background:linear-gradient(90deg,var(--violet),var(--neon));
+  transform:scaleX(var(--prog,0));transform-origin:0 50%;
+}
+@supports (animation-timeline:scroll()){
+  .hud-bar i{
+    transform:scaleX(0);transform-origin:0 50%;
+    animation:barGrow linear both;
+    animation-timeline:scroll(nearest block);
+  }
+  @keyframes barGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+}
+
+/* phase caption */
+.phase{
+  position:absolute;left:50%;bottom:clamp(56px,9vh,96px);transform:translateX(-50%);
+  text-align:center;width:min(92vw,720px);pointer-events:none;
+}
+.phase .num{
+  font-family:var(--f-mono);font-size:10px;letter-spacing:.34em;color:var(--neon);
+}
+.phase .txt{
+  font-family:var(--f-display);font-weight:700;letter-spacing:-.02em;
+  font-size:clamp(1.1rem,2.6vw,1.9rem);margin-top:.35em;color:var(--ice);
+}
+.phase .sub{
+  font-family:var(--f-mono);font-size:10.5px;letter-spacing:.14em;color:var(--lav-dim);
+  margin-top:.6em;text-transform:uppercase;
+}
+
+/* sticky end marker + section chrome */
+.stage-out{
+  position:relative;z-index:2;padding:clamp(48px,8vh,96px) 0 clamp(32px,5vh,60px);
+  border-top:1px solid var(--hair-3);
+  background:linear-gradient(180deg,var(--bg-0),var(--bg-1));
+}
+.legend{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1px;
+  background:var(--hair-3);border:1px solid var(--hair-3);
+}
+.legend div{background:var(--bg-1);padding:16px 18px}
+.legend dt{
+  font-family:var(--f-mono);font-size:9.5px;letter-spacing:.2em;color:var(--neon);
+  text-transform:uppercase;margin:0 0 8px;
+}
+.legend dd{margin:0;font-size:.86rem;color:#c6bce4;line-height:1.5}
+.legend dd b{color:var(--ice);font-weight:600;font-family:var(--f-mono);font-size:.8rem}
+
+/* ============================================================
+   CALCULATOR
+   ============================================================ */
+.calc{
+  position:relative;z-index:2;
+  padding:clamp(64px,11vh,140px) 0 clamp(48px,8vh,96px);
+  background:var(--bg-1);
+  border-top:1px solid var(--hair-3);
+}
+.sec-head{
+  display:flex;align-items:flex-end;gap:clamp(16px,3vw,48px);flex-wrap:wrap;
+  margin-bottom:clamp(28px,5vh,56px);
+}
+.sec-head h2{
+  margin:0;font-family:var(--f-display);font-weight:800;letter-spacing:-.045em;
+  font-size:clamp(2.1rem,6.4vw,4.6rem);line-height:.94;text-transform:uppercase;
+}
+.sec-head p{
+  margin:0;max-width:38ch;color:#bdb2dd;font-size:.92rem;padding-bottom:.5rem;
+}
+.calc-grid{
+  display:grid;grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr);
+  gap:clamp(24px,3.4vw,64px);align-items:start;
+}
+@media (max-width:1024px){.calc-grid{grid-template-columns:1fr}}
+
+.panel{border:1px solid var(--hair-3);background:linear-gradient(180deg,rgba(30,16,51,.6),rgba(15,7,26,.75))}
+.panel-hd{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 16px;border-bottom:1px solid var(--hair-3);
+  font-family:var(--f-mono);font-size:10px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--lav-dim);
+}
+.panel-hd b{color:var(--ice);font-weight:500}
+.dot{width:5px;height:5px;background:var(--neon);border-radius:50%;box-shadow:0 0 10px var(--neon)}
+.panel-bd{padding:clamp(18px,2.6vw,32px)}
+
+/* monumental inputs */
+.io{display:flex;flex-direction:column;gap:clamp(20px,3vw,34px)}
+.io-row{position:relative;display:grid;grid-template-columns:1fr auto;align-items:end;gap:14px}
+.io-row label{
+  position:absolute;top:-4px;left:0;
+  font-family:var(--f-mono);font-size:10px;letter-spacing:.26em;text-transform:uppercase;
+  color:var(--lav-dim);
+}
+.io-row input{
+  width:100%;border:0;background:transparent;padding:14px 0 12px;
+  font-family:var(--f-display);font-weight:800;letter-spacing:-.05em;
+  font-size:clamp(3rem,9vw,6.2rem);line-height:.94;color:var(--ice);
+  -moz-appearance:textfield;
+}
+.io-row input::-webkit-outer-spin-button,
+.io-row input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.io-row input::placeholder{color:rgba(196,181,253,.2)}
+.io-unit{
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;color:var(--lav);
+  padding-bottom:clamp(14px,2.2vw,22px);
+}
+.cota{position:relative;height:22px;grid-column:1/-1}
+.cota::before{
+  content:"";position:absolute;left:0;right:0;top:9px;height:1px;
+  background:repeating-linear-gradient(90deg,var(--hair-2) 0 1px,transparent 1px 9px);
+}
+.cota::after{
+  content:"";position:absolute;left:0;top:9px;height:1px;width:100%;
+  background:linear-gradient(90deg,var(--neon),var(--violet));
+  transform:scaleX(var(--lit,0));transform-origin:0 50%;
+  transition:transform .45s cubic-bezier(.2,.8,.2,1);
+  box-shadow:0 0 14px rgba(232,121,249,.5);
+}
+.io-row:focus-within .cota{--lit:1}
+.io-row .ticks{
+  position:absolute;left:0;right:0;top:4px;height:11px;
+  background:repeating-linear-gradient(90deg,var(--hair-2) 0 1px,transparent 1px 46px);
+  opacity:.9;
+}
+
+/* readout */
+.readout{display:flex;flex-direction:column;gap:18px}
+.imc-line{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.imc-num{
+  font-family:var(--f-display);font-weight:800;letter-spacing:-.06em;
+  font-size:clamp(4.4rem,15vw,10.5rem);line-height:.82;color:var(--ice);
+  font-variant-numeric:tabular-nums;
+  text-shadow:0 0 70px rgba(124,58,237,.35);
+}
+.imc-num.scram{color:var(--lav)}
+.imc-side{padding-top:.9rem;display:flex;flex-direction:column;gap:6px}
+.imc-side .k{font-family:var(--f-mono);font-size:10px;letter-spacing:.24em;color:var(--lav-dim);text-transform:uppercase}
+.imc-side .v{font-family:var(--f-mono);font-size:12px;color:var(--lav);letter-spacing:.06em}
+.cat-tag{
+  display:inline-flex;align-items:center;gap:10px;
+  border:1px solid var(--hair-2);padding:9px 13px;
+  font-family:var(--f-mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;
+  background:rgba(124,58,237,.1);
+}
+.cat-tag i{width:6px;height:6px;background:var(--neon);transform:rotate(45deg);box-shadow:0 0 12px var(--neon)}
+
+/* seals */
+.seals{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:1px;
+  background:var(--hair-3);border:1px solid var(--hair-3);
+}
+.seal{
+  background:var(--bg-1);padding:13px 13px 15px;display:flex;flex-direction:column;gap:9px;
+  opacity:.42;transition:opacity .3s ease,background .3s ease;
+}
+.seal svg{width:26px;height:26px;overflow:visible}
+.seal .n{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.16em;color:var(--lav-dim);text-transform:uppercase}
+.seal .r{font-family:var(--f-mono);font-size:11px;color:var(--lav);letter-spacing:.04em}
+.seal.on{opacity:1;background:linear-gradient(180deg,rgba(232,121,249,.14),rgba(124,58,237,.07))}
+.seal.on .n{color:var(--ice)}
+.seal.on .r{color:var(--neon)}
+
+/* ruler */
+.ruler{margin-top:clamp(22px,3vw,34px)}
+.ruler-hd{
+  display:flex;justify-content:space-between;align-items:baseline;gap:14px;flex-wrap:wrap;
+  font-family:var(--f-mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--lav-dim);
+}
+.ruler-hd b{color:var(--neon);font-weight:500}
+.slider-shell{position:relative;padding:26px 0 8px}
+input[type=range]{
+  -webkit-appearance:none;appearance:none;width:100%;background:transparent;height:34px;margin:0;cursor:ew-resize;
+}
+input[type=range]::-webkit-slider-runnable-track{
+  height:2px;border-radius:0;
+  background:linear-gradient(90deg,var(--violet) 0%,var(--neon) var(--fill,50%),rgba(196,181,253,.18) var(--fill,50%),rgba(196,181,253,.18) 100%);
+}
+input[type=range]::-moz-range-track{height:2px;background:rgba(196,181,253,.18)}
+input[type=range]::-moz-range-progress{height:2px;background:var(--neon)}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:16px;height:16px;margin-top:-7px;background:var(--bg-0);
+  border:1.5px solid var(--neon);transform:rotate(45deg);
+  box-shadow:0 0 0 4px rgba(232,121,249,.12),0 0 22px rgba(232,121,249,.55);
+  transition:box-shadow .18s ease,background .18s ease;
+}
+input[type=range]:active::-webkit-slider-thumb{background:var(--neon);box-shadow:0 0 0 8px rgba(232,121,249,.16),0 0 30px rgba(232,121,249,.8)}
+input[type=range]::-moz-range-thumb{
+  width:14px;height:14px;background:var(--bg-0);border:1.5px solid var(--neon);border-radius:0;
+  box-shadow:0 0 0 4px rgba(232,121,249,.12),0 0 22px rgba(232,121,249,.55);
+}
+.ruler-ticks{
+  position:absolute;left:0;right:0;bottom:0;height:26px;pointer-events:none;
+}
+.ruler-ticks span{
+  position:absolute;bottom:0;transform:translateX(-50%);
+  font-family:var(--f-mono);font-size:9.5px;color:var(--lav-dim);letter-spacing:.1em;
+}
+.ruler-ticks span::before{
+  content:"";position:absolute;left:50%;bottom:15px;width:1px;height:9px;background:var(--hair-2);
+}
+.ruler-ticks span.snap{color:var(--lav)}
+.ruler-ticks span.snap::before{height:15px;bottom:15px;background:var(--neon)}
+.ruler-ticks span.hit{color:var(--neon)}
+.snap-flash{
+  position:absolute;top:0;left:0;right:0;height:100%;pointer-events:none;
+  background:radial-gradient(60% 120% at var(--fx,50%) 50%,rgba(232,121,249,.22),transparent 70%);
+  opacity:0;transition:opacity .32s ease;
+}
+.snap-flash.on{opacity:1}
+
+/* actions */
+.actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px}
+.btn{
+  position:relative;overflow:hidden;
+  display:inline-flex;align-items:center;gap:11px;
+  padding:14px 20px;border:1px solid var(--hair-2);background:transparent;
+  font-family:var(--f-mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--ice);cursor:pointer;transition:border-color .25s,background .25s,transform .2s;
+}
+.btn::before{
+  content:"";position:absolute;inset:0;background:var(--neon);
+  transform:translateY(101%);transition:transform .34s cubic-bezier(.2,.8,.2,1);z-index:-1;
+}
+.btn:hover{border-color:var(--neon);background:rgba(232,121,249,.08)}
+.btn:active{transform:translateY(1px)}
+.btn-primary{background:linear-gradient(180deg,rgba(232,121,249,.18),rgba(124,58,237,.16));border-color:rgba(232,121,249,.45)}
+.btn .arw{transition:transform .3s cubic-bezier(.2,.8,.2,1)}
+.btn:hover .arw{transform:translateX(4px)}
+.btn-ghost{color:var(--lav);border-color:var(--hair)}
+.note{
+  margin:16px 0 0;font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;
+  color:var(--lav-dim);line-height:1.8;
+}
+
+/* ============================================================
+   TABLE OMS + FOOTER
+   ============================================================ */
+.table-sec{
+  position:relative;z-index:2;padding:clamp(48px,8vh,110px) 0;
+  background:linear-gradient(180deg,var(--bg-1),var(--bg-0));
+  border-top:1px solid var(--hair-3);
+}
+.tbl{width:100%;border-collapse:collapse;font-family:var(--f-mono);font-size:12px}
+.tbl caption{
+  text-align:left;font-family:var(--f-mono);font-size:10px;letter-spacing:.24em;
+  text-transform:uppercase;color:var(--lav-dim);padding-bottom:14px;
+}
+.tbl th,.tbl td{
+  text-align:left;padding:13px 14px;border-bottom:1px solid var(--hair-3);
+}
+.tbl thead th{
+  font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--lav-dim);font-weight:400;
+  border-bottom:1px solid var(--hair-2);
+}
+.tbl tbody tr{transition:background .3s ease,opacity .3s ease;opacity:.55}
+.tbl tbody tr.on{opacity:1;background:linear-gradient(90deg,rgba(232,121,249,.13),transparent 72%)}
+.tbl tbody tr.on td:first-child{box-shadow:inset 2px 0 0 var(--neon)}
+.tbl td{color:#c9bfe6}
+.tbl td:first-child{color:var(--ice)}
+.tbl .rng{color:var(--lav)}
+
+.foot{
+  position:relative;z-index:2;padding:clamp(38px,6vh,72px) 0 clamp(26px,4vh,40px);
+  border-top:1px solid var(--hair-3);background:var(--bg-0);
+}
+.foot-grid{display:flex;gap:clamp(18px,3vw,48px);flex-wrap:wrap;align-items:flex-start}
+.foot-grid p{margin:0;max-width:44ch;font-size:.84rem;color:#a99dc9}
+.foot-meta{
+  margin-left:auto;display:flex;gap:clamp(14px,2vw,32px);flex-wrap:wrap;
+  font-family:var(--f-mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--lav-dim);
+}
+.foot-meta b{display:block;color:var(--lav);font-weight:400;margin-top:5px;letter-spacing:.1em}
+.disclaimer{
+  margin-top:26px;padding-top:16px;border-top:1px solid var(--hair-3);
+  font-family:var(--f-mono);font-size:9.5px;letter-spacing:.1em;color:#7d6fa4;line-height:1.9;
+}
+
+/* ============================================================
+   RESPONSIVE — ultrawide → mobile
+   ============================================================ */
+@media (min-width:2000px){
+  :root{--maxw:1960px}
+  body{font-size:17px}
+}
+@media (max-width:560px){
+  .hero{padding-top:96px}
+  .hero-meta{grid-template-columns:1fr 1fr}
+  .hud{font-size:9px;letter-spacing:.1em}
+  .hud > *{max-width:46vw;padding:10px}
+  .hud .big{font-size:1.35rem}
+  .phase{bottom:44px}
+  .phase .sub{display:none}
+  .io-row input{font-size:3.4rem}
+  .tbl th,.tbl td{padding:11px 8px;font-size:11px}
+  .tbl .hide-s{display:none}
+}
+@media (max-height:520px){
+  .stage{height:600vh}
+  .phase{bottom:22px}
+}
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+@media (prefers-reduced-motion:reduce){
+  html:focus-within{scroll-behavior:auto}
+  *,*::before,*::after{
+    animation-duration:.001ms !important;animation-iteration-count:1 !important;
+    transition-duration:.001ms !important;scroll-behavior:auto !important;
+  }
+  .scroll-cue .bar::after{display:none}
+  .cursor,.cursor-dot{display:none}
+  .grain{display:none}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#calc">Pular para a calculadora</a>
+<div class="field" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+<div class="cursor" id="cursor" aria-hidden="true"><i></i><i></i></div>
+<div class="cursor-dot" id="cursorDot" aria-hidden="true"></div>
+
+<header class="hdr">
+  <a class="mark" href="#top">RHINO<span>Calibre IMC-Metric · ref. RHO-01</span></a>
+  <nav class="nav" aria-label="Navegação principal">
+    <a href="#mecanismo">Mecanismo</a>
+    <a href="#calc">Calculadora</a>
+    <a href="#oms">Tabela OMS</a>
+    <a class="nav-cta" href="#calc">Calcular IMC</a>
+  </nav>
+</header>
+
+<main id="top">
+
+  <!-- ============================ HERO ============================ -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="wrap" style="width:100%;max-width:var(--maxw)">
+      <div class="hero-grid">
+        <div>
+          <p class="eyebrow" data-par="0.4" style="margin:0 0 18px">Manufatura digital · edição 001 · 2026</p>
+          <h1 class="hero-title" id="hero-title" data-par="1">
+            Rhino
+            <em>Índice de Massa Corporal</em>
+          </h1>
+        </div>
+        <div class="hero-side" data-par="1.6">
+          <p class="hero-lead">
+            Um mecanismo de leitura biométrica desmontado em <b>25 placas facetadas</b>, anéis
+            taquimétricos e cotas dimensionais. Role para desmontar, calibrar e remontar o
+            rinoceronte — do déficit de massa à carga máxima.
+          </p>
+          <dl class="hero-meta">
+            <div><dt>Calibre</dt><dd>IMC-METRIC</dd></div>
+            <div><dt>Escala</dt><dd>15.0 → 45.0</dd></div>
+            <div><dt>Massa esp.</dt><dd>kg/m²</dd></div>
+          </dl>
+        </div>
+      </div>
+      <div class="hero-foot">
+        <span class="scroll-cue"><span class="bar" aria-hidden="true"></span> Role para desmontar</span>
+        <span class="hero-tag" aria-hidden="true">SVG vetorial · 0 imagens · 1 arquivo</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== SCROLLYTELLING STAGE ===================== -->
+  <section class="stage" id="mecanismo" aria-labelledby="mec-title">
+    <h2 id="mec-title" class="sr-only">O mecanismo do rinoceronte — animação controlada por rolagem</h2>
+
+    <div class="stage-sticky" id="stageSticky">
+      <div class="stage-depth" id="stageDepth">
+        <svg class="stage-svg" id="rhinoSvg" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid meet"
+             role="img" aria-labelledby="rhinoTitle rhinoDesc">
+          <title id="rhinoTitle">Rinoceronte geométrico em vista explodida</title>
+          <desc id="rhinoDesc">Diagrama técnico vetorial de um rinoceronte facetado cercado por anéis graduados e um arco de IMC de 15 a 45, que se desmonta e se remonta conforme a rolagem da página.</desc>
+
+          <defs>
+            <linearGradient id="gPlate" x1="0" y1="0" x2="0.4" y2="1">
+              <stop offset="0" stop-color="#2a1547"/>
+              <stop offset="1" stop-color="#150a26"/>
+            </linearGradient>
+            <linearGradient id="gPlateHi" x1="0" y1="0" x2="0.3" y2="1">
+              <stop offset="0" stop-color="#3d2069"/>
+              <stop offset="1" stop-color="#1b0d31"/>
+            </linearGradient>
+            <linearGradient id="gHorn" x1="0" y1="1" x2="0.4" y2="0">
+              <stop offset="0" stop-color="#5b3aa0"/>
+              <stop offset="1" stop-color="#c4b5fd"/>
+            </linearGradient>
+            <radialGradient id="gCore" cx="0.5" cy="0.5" r="0.5">
+              <stop offset="0" stop-color="#e879f9" stop-opacity=".55"/>
+              <stop offset="1" stop-color="#e879f9" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="gStress" cx="0.5" cy="0.5" r="0.5">
+              <stop offset="0" stop-color="#f43f5e" stop-opacity=".8"/>
+              <stop offset="1" stop-color="#f43f5e" stop-opacity="0"/>
+            </radialGradient>
+            <linearGradient id="gArc" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#7c3aed"/>
+              <stop offset="0.55" stop-color="#8b5cf6"/>
+              <stop offset="1" stop-color="#e879f9"/>
+            </linearGradient>
+            <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="6" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <filter id="glowSoft" x="-80%" y="-80%" width="260%" height="260%">
+              <feGaussianBlur stdDeviation="14" result="b"/>
+              <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+
+          <!-- ============ ANÉIS / BISEL / TAQUÍMETRO ============ -->
+          <g id="rings" data-layer="0.35">
+            <g id="ringOuter">
+              <circle cx="500" cy="500" r="372" fill="none" stroke="rgba(196,181,253,.14)" stroke-width="1"/>
+              <circle cx="500" cy="500" r="364" fill="none" stroke="rgba(196,181,253,.07)" stroke-width="1"/>
+              <g id="ticksOuter"></g>
+              <g id="ringOuterLabels"></g>
+            </g>
+
+            <g id="ringMid">
+              <circle cx="500" cy="500" r="330" fill="none" stroke="rgba(196,181,253,.10)" stroke-width="1"/>
+              <circle cx="500" cy="500" r="300" fill="none" stroke="rgba(124,58,237,.35)" stroke-width="1"
+                      stroke-dasharray="3 11"/>
+              <g id="ticksMid"></g>
+              <g id="ringText">
+                <path id="textArc" d="M 500 205 A 295 295 0 1 1 499.9 205" fill="none"/>
+                <text font-size="12.5" letter-spacing="6.4" fill="rgba(196,181,253,.5)"
+                      font-family="JetBrains Mono, monospace">
+                  <textPath href="#textArc" startOffset="0">CALIBRE IMC-METRIC · RHO-01 · MASSA ESPECÍFICA KG/M² · MANUFATURA SUÍÇA DIGITAL ·&#160;</textPath>
+                </text>
+              </g>
+            </g>
+
+            <g id="ringInner">
+              <circle cx="500" cy="500" r="250" fill="none" stroke="rgba(196,181,253,.09)" stroke-width="1"/>
+              <g id="ticksInner"></g>
+              <g id="crosshair" stroke="rgba(232,121,249,.35)" stroke-width="1">
+                <line x1="500" y1="242" x2="500" y2="262"/>
+                <line x1="500" y1="738" x2="500" y2="758"/>
+                <line x1="242" y1="500" x2="262" y2="500"/>
+                <line x1="738" y1="500" x2="758" y2="500"/>
+              </g>
+            </g>
+
+            <!-- Arco graduado de IMC (15 → 45) -->
+            <g id="arcGauge">
+              <path id="arcTrack" d="" fill="none" stroke="rgba(196,181,253,.16)" stroke-width="3"/>
+              <path id="arcFill" d="" fill="none" stroke="url(#gArc)" stroke-width="3"
+                    stroke-linecap="butt" filter="url(#glow)"/>
+              <g id="arcTicks"></g>
+              <g id="arcLabels"></g>
+              <g id="arcNeedle">
+                <polygon id="needleTip" points="0,-9 6,0 0,9 -6,0" fill="#e879f9" filter="url(#glow)"/>
+                <circle id="needleDot" cx="0" cy="0" r="2.6" fill="#08040d" stroke="#e879f9" stroke-width="1"/>
+              </g>
+            </g>
+          </g>
+
+          <!-- ============ COTAS DIMENSIONAIS ============ -->
+          <g id="dims" data-layer="0.5" opacity="0">
+            <g stroke="rgba(196,181,253,.45)" stroke-width="1" fill="none">
+              <path d="M120 110 H880 M120 100 V120 M880 100 V120 M120 110 V240 M880 110 V250" stroke-dasharray="2 5" opacity=".55"/>
+              <path d="M905 200 V500 M895 200 H915 M895 500 H915"/>
+            </g>
+            <g font-family="JetBrains Mono, monospace" fill="#c4b5fd" letter-spacing="2">
+              <text x="500" y="98" font-size="13" text-anchor="middle">760.0 <tspan fill="#8b7bb8">UN · COMPRIMENTO CORPORAL</tspan></text>
+              <text x="922" y="356" font-size="13" text-anchor="middle" transform="rotate(90 922 356)">300.0 <tspan fill="#8b7bb8">ALT. CERNELHA</tspan></text>
+            </g>
+          </g>
+
+          <!-- ============ CHAMADAS / LEADER LINES ============ -->
+          <g id="callouts" data-layer="0.75" opacity="0"></g>
+
+          <!-- ============ RINOCERONTE ============ -->
+          <g id="rhino" data-layer="1"></g>
+
+          <!-- ============ NÚCLEO / TENSÃO ============ -->
+          <g id="coreFx" data-layer="1.1" opacity="0">
+            <circle cx="500" cy="470" r="150" fill="url(#gCore)"/>
+            <g id="stressFx"></g>
+          </g>
+        </svg>
+      </div>
+
+      <div class="stage-vignette" aria-hidden="true"></div>
+
+      <!-- HUD técnico -->
+      <div class="hud" aria-hidden="true">
+        <div class="hud-bar"><i id="hudBarFill"></i></div>
+        <div class="hud-tl">
+          <b>CALIBRE: IMC-METRIC</b>
+          REF. RHO-01 · SÉRIE 024<br>
+          MONTAGEM <span class="val" id="hudAsm">000.0%</span>
+        </div>
+        <div class="hud-tr">
+          <b>MASSA ESPECÍFICA: KG/M²</b>
+          IMC SIMULADO <span class="val" id="hudImc">15.0</span><br>
+          DESLOC. <span class="val" id="hudScroll">0.00</span>
+        </div>
+        <div class="hud-bl">
+          <b>COORD. MESA XY</b>
+          X <span class="val" id="hudX">+000</span> · Y <span class="val" id="hudY">+000</span><br>
+          PARALAXE <span class="val" id="hudPar">0.0°</span>
+        </div>
+        <div class="hud-br">
+          <b id="hudPhaseName">FASE 01 · DÉFICIT</b>
+          <span class="big"><span id="hudImcBig">15.0</span><sub>KG/M²</sub></span>
+        </div>
+      </div>
+
+      <div class="phase" aria-hidden="true">
+        <div class="num" id="phaseNum">FASE 01 / 03</div>
+        <div class="txt" id="phaseTxt">Estrutura desmontada</div>
+        <div class="sub" id="phaseSub">IMC &lt; 18.5 · placas em flutuação livre</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="stage-out">
+    <div class="wrap">
+      <dl class="legend">
+        <div>
+          <dt>Fase 01 — Desmontagem</dt>
+          <dd>IMC <b>&lt; 18.5</b>. Placas em flutuação livre, linhas de chamada ativas: déficit de massa e estrutura óssea primária exposta.</dd>
+        </div>
+        <div>
+          <dt>Fase 02 — Travamento</dt>
+          <dd>IMC <b>18.5 – 29.9</b>. Convergência cirúrgica na proporção áurea anatômica (φ = 1.618). O mecanismo trava e as cotas dimensionais aparecem.</dd>
+        </div>
+        <div>
+          <dt>Fase 03 — Carga máxima</dt>
+          <dd>IMC <b>≥ 30</b>. Expansão volumétrica lateral (+14% no eixo X), indicadores de tensão estrutural nas patas e no núcleo.</dd>
+        </div>
+        <div>
+          <dt>Tolerância</dt>
+          <dd>Deslocamento interpolado por LERP a <b>60–120 fps</b>, com fallback de scroll-driven CSS e modo de movimento reduzido.</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ========================= CALCULADORA ========================= -->
+  <section class="calc" id="calc" aria-labelledby="calc-title">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <p class="eyebrow" style="margin:0 0 12px">Estação de cálculo · bancada 02</p>
+          <h2 id="calc-title">Calibre<br>de precisão</h2>
+        </div>
+        <p>Informe massa e estatura. O contador embaralha os dígitos a cada entrada e o
+           mecanismo acompanha a leitura em tempo real.</p>
+      </div>
+
+      <div class="calc-grid">
+        <!-- ENTRADAS -->
+        <div class="panel">
+          <div class="panel-hd"><span class="dot"></span><b>Entrada de dados</b><span style="margin-left:auto">2 canais</span></div>
+          <div class="panel-bd">
+            <form class="io" id="calcForm" novalidate>
+              <div class="io-row">
+                <label for="peso">Massa corporal</label>
+                <input id="peso" name="peso" type="number" inputmode="decimal" min="20" max="400" step="0.1"
+                       value="82.0" placeholder="00.0" aria-describedby="pesoHint" />
+                <span class="io-unit">KG</span>
+                <span class="cota" aria-hidden="true"><span class="ticks"></span></span>
+                <span id="pesoHint" class="sr-only">Massa corporal em quilogramas, de 20 a 400.</span>
+              </div>
+              <div class="io-row">
+                <label for="altura">Estatura</label>
+                <input id="altura" name="altura" type="number" inputmode="decimal" min="90" max="250" step="0.1"
+                       value="180" placeholder="000" aria-describedby="alturaHint" />
+                <span class="io-unit">CM</span>
+                <span class="cota" aria-hidden="true"><span class="ticks"></span></span>
+                <span id="alturaHint" class="sr-only">Estatura em centímetros, de 90 a 250.</span>
+              </div>
+            </form>
+
+            <div class="ruler">
+              <div class="ruler-hd">
+                <span>Régua de precisão · IMC</span>
+                <span>Snap magnético <b>18.5 · 25 · 30 · 35 · 40</b></span>
+              </div>
+              <div class="slider-shell">
+                <div class="snap-flash" id="snapFlash" aria-hidden="true"></div>
+                <input id="ruler" type="range" min="15" max="45" step="0.1" value="25.3"
+                       aria-label="Índice de massa corporal simulado, de 15 a 45"
+                       aria-valuetext="25.3 quilogramas por metro quadrado, sobrepeso" />
+                <div class="ruler-ticks" id="rulerTicks" aria-hidden="true"></div>
+              </div>
+              <p class="note">Arrastar o cursor recalibra a massa corporal mantendo a estatura fixa.
+                 Ao se aproximar de um limiar da OMS, o ponteiro é capturado magneticamente.</p>
+            </div>
+
+            <div class="actions">
+              <button class="btn btn-primary" id="btnSync" type="button">
+                Sincronizar com o mecanismo <span class="arw" aria-hidden="true">→</span>
+              </button>
+              <button class="btn btn-ghost" id="btnReset" type="button">Restaurar padrão</button>
+              <button class="btn btn-ghost" id="btnSound" type="button" aria-pressed="false">Som: off</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- LEITURA -->
+        <div class="panel">
+          <div class="panel-hd"><span class="dot"></span><b>Leitura do calibre</b><span style="margin-left:auto" id="stampRef">RHO-01/24</span></div>
+          <div class="panel-bd readout">
+            <div class="imc-line">
+              <div class="imc-num" id="imcNum" aria-hidden="true">25.3</div>
+              <div class="imc-side">
+                <span class="k">Resultado</span>
+                <span class="v" id="imcFormula">82.0 kg ÷ (1.80 m)²</span>
+                <span class="cat-tag" id="catTag"><i aria-hidden="true"></i><span id="catName">Sobrepeso</span></span>
+              </div>
+            </div>
+            <p class="sr-only" role="status" aria-live="polite" id="liveResult">IMC 25,3 — sobrepeso.</p>
+
+            <div class="seals" id="seals" aria-label="Faixas de classificação da OMS"></div>
+            <p class="note">Selos geométricos colecionáveis — o ativo corresponde à faixa em que a leitura se enquadra.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== OMS =========================== -->
+  <section class="table-sec" id="oms" aria-labelledby="oms-title">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <p class="eyebrow" style="margin:0 0 12px">Referência · classificação OMS</p>
+          <h2 id="oms-title">Escala<br>graduada</h2>
+        </div>
+        <p>Pontos de referência do calibre. A linha ativa acompanha a leitura da bancada.</p>
+      </div>
+      <table class="tbl" id="omsTable">
+        <caption>Classificação do estado nutricional por IMC — adulto</caption>
+        <thead>
+          <tr>
+            <th scope="col">Classificação</th>
+            <th scope="col">IMC (kg/m²)</th>
+            <th scope="col" class="hide-s">Zona do mecanismo</th>
+          </tr>
+        </thead>
+        <tbody id="omsBody"></tbody>
+      </table>
+      <p class="note" style="max-width:76ch">
+        O IMC é uma medida populacional de triagem e não distingue massa muscular, massa óssea,
+        distribuição de gordura, idade ou sexo. Atletas, gestantes, idosos e crianças exigem
+        avaliação profissional específica.
+      </p>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <div class="wrap">
+      <div class="foot-grid">
+        <p><strong style="font-family:var(--f-display);font-weight:800;letter-spacing:-.02em">RHINO</strong><br>
+           Peça de demonstração em arquivo único — HTML, CSS e JavaScript sem dependências.
+           Rinoceronte integralmente vetorial, desenhado em SVG.</p>
+        <div class="foot-meta">
+          <div>Calibre<b>IMC-Metric</b></div>
+          <div>Placas<b>25 facetadas</b></div>
+          <div>Escala<b>15 → 45</b></div>
+          <div>Movimento<b>Scroll-driven</b></div>
+        </div>
+      </div>
+      <p class="disclaimer">
+        AVISO · Conteúdo informativo, sem finalidade diagnóstica. Procure profissional de saúde habilitado
+        para avaliação nutricional. · FONTES: Syne / JetBrains Mono / Plus Jakarta Sans ·
+        PALETA: #08040d #0f071a #160b26 #7c3aed #8b5cf6 #c4b5fd #f5f3ff #e879f9 #f43f5e
+      </p>
+    </div>
+  </footer>
+</main>
+
+<script>
+"use strict";
+/* ==================================================================
+   RHINO · CALIBRE IMC-METRIC
+   0. utilidades  1. geometria  2. palco  3. calculadora
+   ================================================================== */
+(function () {
+
+/* ---------------------------- 0. util ---------------------------- */
+var $ = function (s, r) { return (r || document).querySelector(s); };
+var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+var clamp = function (v, a, b) { return v < a ? a : v > b ? b : v; };
+var lerp = function (a, b, t) { return a + (b - a) * t; };
+var smooth = function (a, b, t) { t = clamp((t - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+var nf = function (v, d) { return v.toFixed(d === undefined ? 1 : d).replace('.', ','); };
+var pad3 = function (v) { return (v < 100 ? (v < 10 ? '00' : '0') : '') + Math.round(v); };
+
+var reduceQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+var REDUCED = !!(reduceQuery && reduceQuery.matches);
+if (reduceQuery && reduceQuery.addEventListener) {
+  reduceQuery.addEventListener('change', function (e) {
+    REDUCED = e.matches;
+    if (!REDUCED && !running && typeof requestAnimationFrame === 'function') {
+      running = true; requestAnimationFrame(frame);
+    }
+  });
+}
+var SVGNS = 'http://www.w3.org/2000/svg';
+function mk(tag, attrs, parent) {
+  var n = document.createElementNS(SVGNS, tag);
+  if (attrs) { for (var k in attrs) { n.setAttribute(k, attrs[k]); } }
+  if (parent) { parent.appendChild(n); }
+  return n;
+}
+
+/* ------------------- mapeamento IMC <-> mecanismo -----------------
+   Fonte de verdade única: o IMC.
+     · explodeFromImc → 1 no déficit total (15), 0 a partir do travamento (21.7+)
+     · loadFromImc    → 0 até 25, 1 a partir de 40 (expansão + tensão)
+   O palco converte rolagem (0→1) em IMC (15→45) e deriva tudo disso.      */
+var IMC_MIN = 15, IMC_MAX = 45, IMC_OK = 21.7;
+
+function explodeFromImc(imc) { return clamp((IMC_OK - imc) / (IMC_OK - IMC_MIN), 0, 1); }
+function assemblyFromImc(imc) { return 1 - explodeFromImc(imc); }
+function loadFromImc(imc) { return smooth(25, 40, imc); }
+
+/* inversa de smoothstep(t) por bissecção — usada em imcFromLoad */
+function invSmooth(y) {
+  y = clamp(y, 0, 1);
+  var lo = 0, hi = 1, t, i;
+  for (i = 0; i < 26; i++) { t = (lo + hi) / 2; if (t * t * (3 - 2 * t) < y) { lo = t; } else { hi = t; } }
+  return (lo + hi) / 2;
+}
+/* ramo do déficit: montagem 0→1 corresponde a IMC 15 → 21.7 */
+function imcFromAssembly(a) { return IMC_OK - (1 - clamp(a, 0, 1)) * (IMC_OK - IMC_MIN); }
+/* ramo de carga: carga 0→1 corresponde a IMC 25 → 40 */
+function imcFromLoad(l) { return 25 + 15 * invSmooth(l); }
+/* posição de rolagem do palco (0→1) para um IMC qualquer */
+function stageProgressFromImc(imc) {
+  return (clamp(imc, IMC_MIN, IMC_MAX) - IMC_MIN) / (IMC_MAX - IMC_MIN);
+}
+function stageFromProgress(p) {
+  var imc = IMC_MIN + clamp(p, 0, 1) * (IMC_MAX - IMC_MIN);
+  var ex = explodeFromImc(imc);
+  return { imc: imc, ex: ex, asm: 1 - ex, load: loadFromImc(imc) };
+}
+
+var CATS = [
+  { id: 'abaixo', n: 'Abaixo do peso', r: '< 18,5', min: -Infinity, max: 18.5, zone: 'Déficit · desmontagem', s: 'abaixo' },
+  { id: 'normal', n: 'Peso normal', r: '18,5 – 24,9', min: 18.5, max: 25, zone: 'Equilíbrio · travamento', s: 'normal' },
+  { id: 'sobre', n: 'Sobrepeso', r: '25,0 – 29,9', min: 25, max: 30, zone: 'Carga inicial', s: 'sobre' },
+  { id: 'ob1', n: 'Obesidade I', r: '30,0 – 34,9', min: 30, max: 35, zone: 'Carga elevada', s: 'ob1' },
+  { id: 'ob2', n: 'Obesidade II', r: '35,0 – 39,9', min: 35, max: 40, zone: 'Carga severa', s: 'ob2' },
+  { id: 'ob3', n: 'Obesidade III', r: '≥ 40,0', min: 40, max: Infinity, zone: 'Carga máxima · tensão', s: 'ob3' }
+];
+function catOf(v) {
+  for (var i = 0; i < CATS.length; i++) { if (v >= CATS[i].min && v < CATS[i].max) { return CATS[i]; } }
+  return CATS[CATS.length - 1];
+}
+function calcImc(kg, cm) {
+  var m = cm / 100;
+  if (!(kg > 0) || !(m > 0)) { return 0; }
+  return kg / (m * m);
+}
+
+/* ------------------------- 1. geometria --------------------------- */
+/* Cada placa: pts (polígono fechado), layer (0 fundo → 1 frente),
+   ex/ey (vetor de explosão), lbl (chamada opcional).                  */
+var PLATES = [
+  /* ---- cabeça ---- */
+  { id: 'skull', g: 'head', d: 'M240 400 L200 430 L212 478 L300 488 L312 398 Z', layer: .9, ex: -215, ey: -125, hi: 1 },
+  { id: 'muzzle', g: 'head', d: 'M200 430 L138 444 L146 480 L212 478 Z', layer: .95, ex: -295, ey: -40, hi: 1 },
+  { id: 'jaw', g: 'head', d: 'M146 480 L162 514 L240 522 L300 500 L300 488 L212 478 Z', layer: .8, ex: -232, ey: 150 },
+  { id: 'ear', g: 'head', d: 'M306 400 L320 344 L354 358 L332 402 Z', layer: .95, ex: -120, ey: -235, hi: 1 },
+  /* ---- chifres ---- */
+  { id: 'horn1', g: 'horn', d: 'M150 442 C 156 386 176 342 198 308 C 208 352 216 402 214 436 Z', layer: 1, ex: -150, ey: -300, hi: 1, horn: 1 },
+  { id: 'horn2', g: 'horn', d: 'M222 434 C 228 402 240 380 254 366 C 258 396 260 418 256 436 Z', layer: 1, ex: -40, ey: -268, hi: 1, horn: 1 },
+  /* ---- pescoço ---- */
+  { id: 'neck', g: 'body', d: 'M312 398 L300 488 L332 504 L352 452 L348 386 Z', layer: .7, ex: -140, ey: 62 },
+  /* ---- blindagem dorsal ---- */
+  { id: 'dorsal1', g: 'body', d: 'M348 386 L470 356 L486 432 L352 452 Z', layer: .75, ex: -58, ey: -212 },
+  { id: 'dorsal2', g: 'body', d: 'M470 356 L600 350 L612 426 L486 432 Z', layer: .7, ex: 8, ey: -238 },
+  { id: 'dorsal3', g: 'body', d: 'M600 350 L720 372 L726 446 L612 426 Z', layer: .75, ex: 74, ey: -206 },
+  /* ---- flancos ---- */
+  { id: 'flank1', g: 'body', d: 'M352 452 L486 432 L496 516 L362 528 Z', layer: .85, ex: -112, ey: 118 },
+  { id: 'flank2', g: 'body', d: 'M486 432 L612 426 L618 514 L496 516 Z', layer: .8, ex: 0, ey: 168 },
+  { id: 'flank3', g: 'body', d: 'M612 426 L726 446 L722 506 L618 514 Z', layer: .85, ex: 108, ey: 128 },
+  /* ---- ventre / peito ---- */
+  { id: 'belly', g: 'body', d: 'M362 528 L496 516 L618 514 L722 506 L712 552 L488 566 L378 556 Z', layer: .65, ex: 0, ey: 232 },
+  { id: 'chest', g: 'body', d: 'M348 386 L352 452 L362 528 L378 556 L414 502 L406 418 Z', layer: .9, ex: -188, ey: 96, hi: 1 },
+  /* ---- ombro / anca ---- */
+  { id: 'shoulder', g: 'body', d: 'M380 402 L448 388 L462 476 L402 526 L374 470 Z', layer: .95, ex: -96, ey: -64, hi: 1 },
+  { id: 'haunch', g: 'body', d: 'M692 422 L774 440 L782 520 L702 546 L668 470 Z', layer: .95, ex: 192, ey: -58, hi: 1 },
+  /* ---- cauda ---- */
+  { id: 'tail1', g: 'tail', d: 'M778 434 L806 414 L828 440 L800 460 Z', layer: .9, ex: 250, ey: -146 },
+  { id: 'tail2', g: 'tail', d: 'M806 414 L840 384 L856 406 L828 440 Z', layer: .9, ex: 330, ey: -196 },
+  /* ---- patas modulares ---- */
+  { id: 'legF_up', g: 'legs', d: 'M394 512 L448 506 L458 572 L402 580 Z', layer: .75, ex: -64, ey: 122 },
+  { id: 'legF_dn', g: 'legs', d: 'M402 580 L458 572 L450 636 L400 642 Z', layer: .7, ex: -64, ey: 206 },
+  { id: 'legF_ft', g: 'legs', d: 'M400 642 L450 636 L454 662 L396 666 Z', layer: .95, ex: -64, ey: 288, hi: 1 },
+  { id: 'legR_up', g: 'legs', d: 'M696 530 L768 516 L774 584 L702 594 Z', layer: .75, ex: 148, ey: 116 },
+  { id: 'legR_dn', g: 'legs', d: 'M702 594 L774 584 L768 644 L706 650 Z', layer: .7, ex: 148, ey: 196 },
+  { id: 'legR_ft', g: 'legs', d: 'M706 650 L768 644 L772 668 L704 672 Z', layer: .95, ex: 148, ey: 276, hi: 1 }
+];
+
+var CALLOUTS = [
+  { from: [404, 380], to: [206, 214], label: 'Déficit de massa', sub: 'IMC < 18.5', ax: 88 },
+  { from: [214, 420], to: [96, 626], label: 'Estrutura óssea primária', sub: 'Chassi exposto', ax: 300 },
+  { from: [186, 372], to: [64, 300], label: 'Chifre primário', sub: 'Ceratina · 62 un', ax: 232 },
+  { from: [742, 470], to: [912, 640], label: 'Blindagem dorsal', sub: 'Placas D1–D3', ax: 736 }
+];
+
+var STRESS_POINTS = [[426, 620], [738, 620], [500, 470], [406, 500], [730, 490]];
+
+/* ------------------------- 2. construção -------------------------- */
+var svg = $('#rhinoSvg');
+var gRhino = $('#rhino');
+var gCallouts = $('#callouts');
+var gStress = $('#stressFx');
+var gDims = $('#dims');
+var plateNodes = [];
+
+function centroid(d) {
+  var nums = d.match(/-?\d+(\.\d+)?/g) || [];
+  var sx = 0, sy = 0, n = 0;
+  for (var i = 0; i + 1 < nums.length; i += 2) { sx += parseFloat(nums[i]); sy += parseFloat(nums[i + 1]); n++; }
+  return n ? [sx / n, sy / n] : [500, 500];
+}
+
+/* --- placas do rinoceronte --- */
+PLATES.forEach(function (p) {
+  var c = centroid(p.d);
+  var g = mk('g', { class: 'plate', 'data-id': p.id }, gRhino);
+  mk('path', {
+    d: p.d,
+    fill: p.horn ? 'url(#gHorn)' : (p.hi ? 'url(#gPlateHi)' : 'url(#gPlate)'),
+    stroke: p.horn ? 'rgba(245,243,255,.55)' : 'rgba(196,181,253,.34)',
+    'stroke-width': p.hi ? 1.2 : 1,
+    'stroke-linejoin': 'round'
+  }, g);
+  /* rebite / mancal em cada placa */
+  mk('circle', { cx: c[0], cy: c[1], r: 2.2, fill: 'none', stroke: 'rgba(196,181,253,.5)', 'stroke-width': .8 }, g);
+  plateNodes.push({
+    p: p, node: g, cx: c[0], cy: c[1],
+    cur: 'x' /* força primeira escrita */
+  });
+});
+
+/* olhal mecânico */
+(function () {
+  var g = mk('g', { class: 'plate', 'data-id': 'eye' }, gRhino);
+  mk('circle', { cx: 252, cy: 442, r: 7, fill: 'none', stroke: '#c4b5fd', 'stroke-width': 1 }, g);
+  mk('circle', { cx: 252, cy: 442, r: 2.6, fill: '#e879f9' }, g);
+  plateNodes.push({ p: { ex: -200, ey: -118, layer: 1 }, node: g, cx: 252, cy: 442, cur: 'x' });
+})();
+
+/* núcleo + pontos de tensão */
+STRESS_POINTS.forEach(function (pt) {
+  var g = mk('g', null, gStress);
+  mk('circle', { cx: pt[0], cy: pt[1], r: 26, fill: 'url(#gStress)' }, g);
+  mk('circle', { cx: pt[0], cy: pt[1], r: 9, fill: 'none', stroke: '#f43f5e', 'stroke-width': 1 }, g);
+  mk('path', {
+    d: 'M' + (pt[0] - 14) + ' ' + pt[1] + ' H' + (pt[0] + 14) + ' M' + pt[0] + ' ' + (pt[1] - 14) + ' V' + (pt[1] + 14),
+    stroke: '#f43f5e', 'stroke-width': 1, opacity: '.8'
+  }, g);
+});
+
+/* --- linhas de chamada --- */
+var calloutNodes = CALLOUTS.map(function (c) {
+  var g = mk('g', { class: 'callout' }, gCallouts);
+  var line = mk('path', { d: '', fill: 'none', stroke: 'rgba(232,121,249,.65)', 'stroke-width': 1 }, g);
+  mk('circle', { cx: c.from[0], cy: c.from[1], r: 3.4, fill: 'none', stroke: '#e879f9', 'stroke-width': 1 }, g);
+  mk('circle', { cx: c.from[0], cy: c.from[1], r: 1.2, fill: '#e879f9' }, g);
+  var anchor = c.to[0] < c.ax ? 'start' : 'end';
+  var t1 = mk('text', {
+    x: c.ax, y: c.to[1] - 6, 'font-size': 15, 'text-anchor': anchor, fill: '#f5f3ff',
+    'font-family': 'JetBrains Mono, monospace', 'letter-spacing': '1.2'
+  }, g);
+  t1.textContent = c.label;
+  var t2 = mk('text', {
+    x: c.ax, y: c.to[1] + 14, 'font-size': 11.5, 'text-anchor': anchor, fill: '#8b7bb8',
+    'font-family': 'JetBrains Mono, monospace', 'letter-spacing': '2.4'
+  }, g);
+  t2.textContent = c.sub.toUpperCase();
+  return { c: c, line: line };
+});
+
+/* --- anéis: tiques --- */
+function polar(cx, cy, r, deg) {
+  var a = (deg - 90) * Math.PI / 180;
+  return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+}
+(function buildTicks() {
+  var o = $('#ticksOuter'), m = $('#ticksMid'), i = $('#ticksInner'), ol = $('#ringOuterLabels');
+  for (var d = 0; d < 360; d += 3) {
+    var major = d % 15 === 0;
+    var p1 = polar(500, 500, 364, d), p2 = polar(500, 500, major ? 344 : 354, d);
+    mk('line', {
+      x1: p1[0], y1: p1[1], x2: p2[0], y2: p2[1],
+      stroke: major ? 'rgba(196,181,253,.55)' : 'rgba(196,181,253,.22)',
+      'stroke-width': major ? 1.2 : .7
+    }, o);
+  }
+  for (var g2 = 0; g2 < 360; g2 += 30) {
+    var lp = polar(500, 500, 338, g2);
+    var t = mk('text', {
+      x: lp[0], y: lp[1] + 4, 'font-size': 12, 'text-anchor': 'middle', fill: 'rgba(196,181,253,.55)',
+      'font-family': 'JetBrains Mono, monospace', 'letter-spacing': '1'
+    }, ol);
+    t.textContent = pad3(g2);
+  }
+  for (var d2 = 0; d2 < 360; d2 += 6) {
+    var q1 = polar(500, 500, 330, d2), q2 = polar(500, 500, d2 % 30 === 0 ? 314 : 322, d2);
+    mk('line', { x1: q1[0], y1: q1[1], x2: q2[0], y2: q2[1], stroke: 'rgba(139,92,246,.5)', 'stroke-width': .8 }, m);
+  }
+  for (var d3 = 0; d3 < 360; d3 += 12) {
+    var s = polar(500, 500, 250, d3);
+    mk('rect', {
+      x: s[0] - 2, y: s[1] - 2, width: 4, height: 4,
+      fill: 'none', stroke: 'rgba(196,181,253,.3)', 'stroke-width': .8,
+      transform: 'rotate(45 ' + s[0] + ' ' + s[1] + ')'
+    }, i);
+  }
+})();
+
+/* --- arco graduado de IMC (15 → 45), varredura no topo --- */
+var ARC_R = 286, ARC_A0 = 200, ARC_A1 = 520;
+(function buildArc() {
+  function arcPath(a0, a1, r) {
+    var s = polar(500, 500, r, a0), e = polar(500, 500, r, a1);
+    var large = (a1 - a0) % 360 > 180 ? 1 : 0;
+    return 'M' + s[0].toFixed(2) + ' ' + s[1].toFixed(2) + ' A' + r + ' ' + r + ' 0 ' + large + ' 1 ' + e[0].toFixed(2) + ' ' + e[1].toFixed(2);
+  }
+  var dFull = arcPath(ARC_A0, ARC_A1, ARC_R);
+  $('#arcTrack').setAttribute('d', dFull);
+  var fill = $('#arcFill');
+  fill.setAttribute('d', dFull);
+  fill.setAttribute('pathLength', '100');
+  fill.setAttribute('stroke-dasharray', '100');
+  fill.setAttribute('stroke-dashoffset', '100');
+
+  var ticks = $('#arcTicks'), labels = $('#arcLabels');
+  var SNAP_VALS = [18.5, 25, 30, 35, 40];
+  var vals = [], v;
+  for (v = IMC_MIN; v <= IMC_MAX + .001; v += 1) { vals.push(Math.round(v)); }
+  /* limiares fracionários da OMS entram como tiques próprios */
+  SNAP_VALS.forEach(function (s) { if (s % 1 !== 0) { vals.push(s); } });
+  vals.sort(function (a, b) { return a - b; });
+  vals.forEach(function (v) {
+    var deg = ARC_A0 + (v - IMC_MIN) / (IMC_MAX - IMC_MIN) * (ARC_A1 - ARC_A0);
+    var snap = SNAP_VALS.indexOf(v) > -1;
+    var major = snap || v % 5 === 0;
+    var p1 = polar(500, 500, ARC_R - 6, deg), p2 = polar(500, 500, ARC_R - (major ? 20 : 13), deg);
+    mk('line', {
+      x1: p1[0], y1: p1[1], x2: p2[0], y2: p2[1],
+      stroke: snap ? '#e879f9' : (major ? 'rgba(196,181,253,.7)' : 'rgba(196,181,253,.3)'),
+      'stroke-width': snap ? 1.6 : (major ? 1.1 : .7)
+    }, ticks);
+    if (major) {
+      var lp = polar(500, 500, ARC_R - 36, deg);
+      var t = mk('text', {
+        x: lp[0], y: lp[1] + 4.5, 'font-size': 13, 'text-anchor': 'middle',
+        fill: snap ? '#e879f9' : 'rgba(196,181,253,.65)',
+        'font-family': 'JetBrains Mono, monospace', 'letter-spacing': '1'
+      }, labels);
+      t.textContent = v % 1 ? nf(v, 1) : String(v);
+    }
+  });
+})();
+
+/* --------------------------- 3. palco ----------------------------- */
+var stage = $('#mecanismo');
+var depth = $('#stageDepth');
+var ringsOuter = $('#ringOuter'), ringsMid = $('#ringMid'), ringsInner = $('#ringInner');
+var arcFill = $('#arcFill'), needleTip = $('#needleTip'), needleDot = $('#needleDot');
+var coreFx = $('#coreFx');
+
+var hudAsm = $('#hudAsm'), hudImc = $('#hudImc'), hudScroll = $('#hudScroll'),
+    hudX = $('#hudX'), hudY = $('#hudY'), hudPar = $('#hudPar'), hudPhaseName = $('#hudPhaseName'),
+    hudImcBig = $('#hudImcBig'), hudBarFill = $('#hudBarFill');
+var phaseNum = $('#phaseNum'), phaseTxt = $('#phaseTxt'), phaseSub = $('#phaseSub');
+
+var PHASES = [
+  { n: '01', name: 'FASE 01 · DÉFICIT', txt: 'Estrutura desmontada', sub: 'IMC < 18.5 · placas em flutuação livre' },
+  { n: '02', name: 'FASE 02 · TRAVAMENTO', txt: 'Proporção áurea anatômica', sub: 'IMC 18.5 – 29.9 · mecanismo travado · φ = 1.618' },
+  { n: '03', name: 'FASE 03 · CARGA MÁXIMA', txt: 'Tensão estrutural', sub: 'IMC ≥ 30 · expansão volumétrica lateral + núcleo em alerta' }
+];
+
+/* estado interpolado (LERP) — S = suavizado, T = alvo */
+var S = { asm: 0, ex: 1, load: 0, imc: IMC_MIN, rot: 0, par: 0, mx: 0, my: 0 };
+var T = { asm: 0, ex: 1, load: 0, imc: IMC_MIN, rot: 0, par: 0, mx: 0, my: 0 };
+var lastPhase = -1, lastHud = {};
+var supportsScrollTimeline = !!(window.CSS && window.CSS.supports && window.CSS.supports('animation-timeline', 'scroll()'));
+
+function setTxt(node, v) {
+  var key = node.id || node.textContent;
+  if (lastHud[key] === v) { return; }
+  lastHud[key] = v;
+  node.textContent = v;
+}
+
+function render() {
+  var asm = S.asm, load = S.load, ex = S.ex;
+
+  /* ---- anéis ---- */
+  var r1 = S.rot, r2 = -S.rot * 1.35, r3 = S.rot * .72;
+  ringsOuter.setAttribute('transform', 'rotate(' + r1.toFixed(2) + ' 500 500)');
+  ringsMid.setAttribute('transform', 'rotate(' + r2.toFixed(2) + ' 500 500)');
+  ringsInner.setAttribute('transform', 'rotate(' + r3.toFixed(2) + ' 500 500)');
+
+  /* ---- arco de IMC ---- */
+  var imc = S.imc;
+  arcFill.setAttribute('stroke-dashoffset', (100 - S.par * 100).toFixed(2));
+  var nd = ARC_A0 + S.par * (ARC_A1 - ARC_A0);
+  var np = polar(500, 500, ARC_R - 13, nd), np2 = polar(500, 500, ARC_R + 12, nd);
+  var ntrans = 'translate(' + np[0].toFixed(2) + ' ' + np[1].toFixed(2) + ') rotate(' + (nd + 90).toFixed(2) + ')';
+  needleTip.setAttribute('transform', ntrans);
+  needleDot.setAttribute('cx', np2[0].toFixed(2));
+  needleDot.setAttribute('cy', np2[1].toFixed(2));
+
+  /* ---- placas ---- */
+  var lock = smooth(.86, 1, asm);
+  for (var i = 0; i < plateNodes.length; i++) {
+    var pn = plateNodes[i], p = pn.p;
+    var k = ex * (1 - lock * .35);
+    var tx = p.ex * k, ty = p.ey * k;
+    var sx = 1 + load * .14 + ex * .02;
+    var sy = 1 - load * .05;
+    var rot = (1 - asm) * (p.ey > 0 ? 2.2 : -2.6) * (p.ex >= 0 ? 1 : -1);
+    var t = 'translate(' + tx.toFixed(2) + ' ' + ty.toFixed(2) + ') ' +
+            'translate(' + pn.cx.toFixed(2) + ' ' + pn.cy.toFixed(2) + ') ' +
+            'rotate(' + rot.toFixed(2) + ') scale(' + sx.toFixed(4) + ' ' + sy.toFixed(4) + ') ' +
+            'translate(' + (-pn.cx).toFixed(2) + ' ' + (-pn.cy).toFixed(2) + ')';
+    if (t !== pn.cur) { pn.node.setAttribute('transform', t); pn.cur = t; }
+    var op = .42 + .58 * asm + load * .06;
+    var opS = op.toFixed(3);
+    if (pn.node.getAttribute('opacity') !== opS) { pn.node.setAttribute('opacity', opS); }
+  }
+
+  /* ---- chamadas / cotas / núcleo ---- */
+  var cOp = smooth(.10, .58, ex);
+  if (gCallouts.getAttribute('opacity') !== cOp.toFixed(3)) { gCallouts.setAttribute('opacity', cOp.toFixed(3)); }
+  for (var j = 0; j < calloutNodes.length; j++) {
+    var c = calloutNodes[j].c, k2 = ex;
+    var fx = c.from[0] + (c.from[0] - 500) * .12 * k2, fy = c.from[1] + (c.from[1] - 470) * .12 * k2;
+    var tx2 = c.to[0] + (c.to[0] - 500) * .3 * k2, ty2 = c.to[1] + (c.to[1] - 470) * .3 * k2;
+    calloutNodes[j].line.setAttribute('d',
+      'M' + fx.toFixed(1) + ' ' + fy.toFixed(1) + ' L' + tx2.toFixed(1) + ' ' + ty2.toFixed(1) +
+      ' H' + c.ax.toFixed(1));
+  }
+  var dOp = smooth(.86, .995, asm) * (1 - load * .85);
+  if (gDims.getAttribute('opacity') !== dOp.toFixed(3)) { gDims.setAttribute('opacity', dOp.toFixed(3)); }
+  var sOp = smooth(.04, .6, load);
+  if (coreFx.getAttribute('opacity') !== sOp.toFixed(3)) { coreFx.setAttribute('opacity', sOp.toFixed(3)); }
+
+  /* ---- paralaxe 3D por profundidade de camada ---- */
+  var tiltX = (-S.my * 5.5).toFixed(3), tiltY = (S.mx * 7.5).toFixed(3);
+  var dtr = 'rotateX(' + tiltX + 'deg) rotateY(' + tiltY + 'deg) translate3d(' +
+            (S.mx * 10).toFixed(2) + 'px,' + (S.my * 8).toFixed(2) + 'px,0)';
+  if (depth._t !== dtr) { depth.style.transform = dtr; depth._t = dtr; }
+  var str = 'translate3d(' + (S.mx * -22).toFixed(2) + 'px,' + (S.my * -16).toFixed(2) + 'px,0) scale(1.012)';
+  if (svg._t !== str) { svg.style.transform = str; svg._t = str; }
+
+  /* ---- HUD ---- */
+  /* valor arredondado = o mesmo exibido, para a fase nunca contradizer o mostrador */
+  var imcR = Math.round(imc * 10) / 10;
+  setTxt(hudAsm, (asm * 100).toFixed(1) + '%');
+  setTxt(hudImc, imcR.toFixed(1));
+  setTxt(hudScroll, S.par.toFixed(3));
+  setTxt(hudImcBig, imcR.toFixed(1));
+  var ph = imcR < 18.5 ? 0 : (imcR < 30 ? 1 : 2);
+  if (ph !== lastPhase) {
+    lastPhase = ph;
+    phaseNum.textContent = 'FASE ' + PHASES[ph].n + ' / 03';
+    phaseTxt.textContent = PHASES[ph].txt;
+    phaseSub.textContent = PHASES[ph].sub;
+    hudPhaseName.textContent = PHASES[ph].name;
+  }
+}
+
+/* progresso de rolagem -> alvos */
+function readScroll() {
+  var rect = stage.getBoundingClientRect();
+  var total = stage.offsetHeight - window.innerHeight;
+  var p = total > 0 ? clamp(-rect.top / total, 0, 1) : 0;
+  var st = stageFromProgress(p);
+  T.par = p;
+  T.imc = st.imc;
+  T.ex = st.ex;
+  T.asm = st.asm;
+  T.load = st.load;
+  T.rot = p * 118;
+  if (!supportsScrollTimeline) { hudBarFill.style.setProperty('--prog', p.toFixed(4)); }
+}
+
+/* cursor + paralaxe de mouse */
+var cursor = $('#cursor'), cursorDot = $('#cursorDot');
+var cx = window.innerWidth / 2, cy = window.innerHeight / 2, hasPointer = false;
+window.addEventListener('pointermove', function (e) {
+  if (!hasPointer) { hasPointer = true; cursor.style.opacity = 1; cursorDot.style.opacity = 1; }
+  cx = e.clientX; cy = e.clientY;
+  T.mx = (e.clientX / window.innerWidth) * 2 - 1;
+  T.my = (e.clientY / window.innerHeight) * 2 - 1;
+  setTxt(hudX, (T.mx >= 0 ? '+' : '-') + pad3(Math.abs(T.mx * 999)));
+  setTxt(hudY, (T.my >= 0 ? '+' : '-') + pad3(Math.abs(T.my * 999)));
+}, { passive: true });
+document.addEventListener('pointerdown', function () { cursor.classList.add('is-hot'); }, { passive: true });
+document.addEventListener('pointerup', function () { cursor.classList.remove('is-hot'); }, { passive: true });
+$$('a,button,input,label').forEach(function (el) {
+  el.addEventListener('pointerenter', function () { cursor.classList.add('is-hot'); }, { passive: true });
+  el.addEventListener('pointerleave', function () { cursor.classList.remove('is-hot'); }, { passive: true });
+});
+
+/* micro-paralaxe do hero (camadas) */
+var parEls = $$('[data-par]').map(function (el) { return { el: el, k: parseFloat(el.dataset.par) || 1 }; });
+
+/* loop rAF */
+var running = true, csx = 0, csy = 0;
+function frame() {
+  if (REDUCED) {
+    readScroll();
+    S.asm = T.asm; S.ex = T.ex; S.load = T.load; S.imc = T.imc;
+    S.rot = T.rot; S.par = T.par; S.mx = 0; S.my = 0;
+    cursor.style.opacity = 0; cursorDot.style.opacity = 0;
+    render();
+    return;
+  }
+  readScroll();
+  var k = .115;
+  S.asm = lerp(S.asm, T.asm, k);
+  S.ex = lerp(S.ex, T.ex, k);
+  S.load = lerp(S.load, T.load, k);
+  S.imc = lerp(S.imc, T.imc, k * 1.4);
+  S.par = lerp(S.par, T.par, k * 1.4);
+  S.rot = lerp(S.rot, T.rot, k);
+  S.mx = lerp(S.mx, T.mx, .07);
+  S.my = lerp(S.my, T.my, .07);
+  csx = lerp(csx, cx, .22); csy = lerp(csy, cy, .38);
+  cursor.style.transform = 'translate3d(' + csx.toFixed(1) + 'px,' + csy.toFixed(1) + 'px,0)';
+  cursorDot.style.transform = 'translate3d(' + cx.toFixed(1) + 'px,' + cy.toFixed(1) + 'px,0)';
+  var sy = window.scrollY || window.pageYOffset || 0;
+  for (var i = 0; i < parEls.length; i++) {
+    var pe = parEls[i];
+    if (sy < window.innerHeight * 1.2) {
+      pe.el.style.transform = 'translate3d(0,' + (sy * .06 * pe.k).toFixed(2) + 'px,0)';
+    }
+  }
+  setTxt(hudPar, (Math.abs(S.mx * 7.5)).toFixed(1) + '°');
+  render();
+  if (running) { requestAnimationFrame(frame); }
+}
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden) { running = false; }
+  else if (!running) { running = true; requestAnimationFrame(frame); }
+});
+readScroll();
+S.asm = T.asm; S.ex = T.ex; S.load = T.load; S.imc = T.imc; S.par = T.par; S.rot = T.rot;
+render();
+if (!REDUCED) { requestAnimationFrame(frame); }
+
+/* ----------------------- 4. calculadora --------------------------- */
+var peso = $('#peso'), altura = $('#altura'), ruler = $('#ruler');
+var imcNum = $('#imcNum'), imcFormula = $('#imcFormula'), catName = $('#catName');
+var liveResult = $('#liveResult'), snapFlash = $('#snapFlash'), rulerTicks = $('#rulerTicks');
+var sealsBox = $('#seals'), omsBody = $('#omsBody');
+var SNAPS = [18.5, 25, 30, 35, 40];
+var DEFAULTS = { peso: '82.0', altura: '180' };
+var suppressRulerSync = false;
+
+/* selos */
+var sealShapes = {
+  abaixo: 'M13 1 L25 13 L13 25 L1 13 Z',
+  normal: 'M13 1 L24 7 L24 19 L13 25 L2 19 L2 7 Z',
+  sobre: 'M13 2 L23 9 L20 22 L6 22 L3 9 Z',
+  ob1: 'M13 1 L25 13 L13 25 L1 13 Z M13 7 L19 13 L13 19 L7 13 Z',
+  ob2: 'M2 2 H24 V24 H2 Z M8 8 H18 V18 H8 Z',
+  ob3: 'M13 0 L26 13 L13 26 L0 13 Z M13 6 L20 13 L13 20 L6 13 Z'
+};
+CATS.forEach(function (c) {
+  var d = document.createElement('div');
+  d.className = 'seal'; d.dataset.cat = c.id;
+  d.innerHTML =
+    '<svg viewBox="0 0 26 26" aria-hidden="true"><path d="' + sealShapes[c.s] +
+    '" fill="none" stroke="#c4b5fd" stroke-width="1.1"/></svg>' +
+    '<span class="n">' + c.n + '</span><span class="r">' + c.r + '</span>';
+  sealsBox.appendChild(d);
+});
+
+/* tabela OMS */
+CATS.forEach(function (c) {
+  var tr = document.createElement('tr');
+  tr.dataset.cat = c.id;
+  tr.innerHTML = '<td>' + c.n + '</td><td class="rng">' + c.r + '</td><td class="hide-s">' + c.zone + '</td>';
+  omsBody.appendChild(tr);
+});
+
+/* tiques da régua */
+(function () {
+  var marks = [15, 18.5, 20, 25, 30, 35, 40, 45];
+  marks.forEach(function (m) {
+    var s = document.createElement('span');
+    s.style.left = ((m - 15) / 30 * 100) + '%';
+    s.textContent = nf(m, m % 1 ? 1 : 0);
+    if (SNAPS.indexOf(m) > -1) { s.classList.add('snap'); s.dataset.snap = m; }
+    rulerTicks.appendChild(s);
+  });
+})();
+
+/* áudio de snap (opcional, criado só no primeiro gesto) */
+var audioCtx = null, soundOn = false;
+function beep(freq) {
+  if (!soundOn) { return; }
+  try {
+    if (!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+    var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = 'triangle'; o.frequency.value = freq || 1180;
+    g.gain.setValueAtTime(.0001, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.06, audioCtx.currentTime + .008);
+    g.gain.exponentialRampToValueAtTime(.0001, audioCtx.currentTime + .09);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + .1);
+  } catch (e) { /* silencioso */ }
+}
+
+/* scramble counter */
+var scrambleRaf = 0;
+function scrambleTo(target) {
+  var txt = target.toFixed(1);
+  if (REDUCED) { imcNum.textContent = txt; imcNum.classList.remove('scram'); return; }
+  cancelAnimationFrame(scrambleRaf);
+  imcNum.classList.add('scram');
+  var chars = '0123456789';
+  var start = performance.now(), dur = 420;
+  (function step(now) {
+    var t = clamp((now - start) / dur, 0, 1);
+    var fixed = Math.floor(t * txt.length);
+    var out = '';
+    for (var i = 0; i < txt.length; i++) {
+      if (txt[i] === ',' || txt[i] === '.') { out += txt[i]; }
+      else if (i < fixed) { out += txt[i]; }
+      else { out += chars[(Math.random() * 10) | 0]; }
+    }
+    imcNum.textContent = out;
+    if (t < 1) { scrambleRaf = requestAnimationFrame(step); }
+    else { imcNum.textContent = txt; imcNum.classList.remove('scram'); }
+  })(start);
+}
+
+var lastCat = null, lastImcTxt = '';
+function paintResult(imc) {
+  var c = catOf(imc);
+  var txt = imc > 0 ? imc.toFixed(1) : '0.0';
+  if (txt !== lastImcTxt) { lastImcTxt = txt; scrambleTo(imc > 0 ? imc : 0); }
+  imcFormula.textContent = (parseFloat(peso.value) || 0).toFixed(1).replace('.', ',') + ' kg ÷ (' +
+    ((parseFloat(altura.value) || 0) / 100).toFixed(2).replace('.', ',') + ' m)²';
+  if (c !== lastCat) {
+    lastCat = c;
+    catName.textContent = c.n;
+    $$('.seal', sealsBox).forEach(function (s) { s.classList.toggle('on', s.dataset.cat === c.id); });
+    $$('tr', omsBody).forEach(function (r) { r.classList.toggle('on', r.dataset.cat === c.id); });
+    ruler.setAttribute('aria-valuetext', nf(imc, 1) + ' quilogramas por metro quadrado, ' + c.n.toLowerCase());
+    liveResult.textContent = 'IMC ' + nf(imc, 1) + ' — ' + c.n.toLowerCase() + '.';
+  }
+}
+
+function fromInputs() {
+  var kg = parseFloat(peso.value), cm = parseFloat(altura.value);
+  var imc = calcImc(kg, cm);
+  if (imc > 0) {
+    suppressRulerSync = true;
+    ruler.value = clamp(imc, 15, 45).toFixed(1);
+    suppressRulerSync = false;
+  }
+  paintSlider(imc > 0 ? clamp(imc, 15, 45) : 15);
+  paintResult(imc);
+}
+
+function paintSlider(v) {
+  var pct = (v - 15) / 30 * 100;
+  ruler.style.setProperty('--fill', pct.toFixed(2) + '%');
+  snapFlash.style.setProperty('--fx', pct.toFixed(2) + '%');
+  $$('span', rulerTicks).forEach(function (s) {
+    if (s.dataset.snap) { s.classList.toggle('hit', Math.abs(parseFloat(s.dataset.snap) - v) < .06); }
+  });
+}
+
+/* snap magnético */
+var snapTimer = 0;
+function magnetic(v) {
+  for (var i = 0; i < SNAPS.length; i++) {
+    if (Math.abs(v - SNAPS[i]) <= .34) { return SNAPS[i]; }
+  }
+  return null;
+}
+ruler.addEventListener('input', function () {
+  var raw = parseFloat(ruler.value);
+  var s = magnetic(raw);
+  if (s !== null && Math.abs(s - raw) > 1e-6) {
+    ruler.value = s.toFixed(1);
+    raw = s;
+    paintSlider(s);
+    snapFlash.classList.add('on');
+    clearTimeout(snapTimer);
+    snapTimer = setTimeout(function () { snapFlash.classList.remove('on'); }, 340);
+    beep(1320);
+  } else {
+    paintSlider(raw);
+  }
+  if (suppressRulerSync) { return; }
+  var cm = parseFloat(altura.value) || 170;
+  var kg = raw * Math.pow(cm / 100, 2);
+  peso.value = kg.toFixed(1);
+  paintResult(calcImc(kg, cm));
+});
+
+peso.addEventListener('input', fromInputs);
+altura.addEventListener('input', fromInputs);
+peso.addEventListener('change', fromInputs);
+altura.addEventListener('change', fromInputs);
+
+/* sincronizar com o mecanismo */
+$('#btnSync').addEventListener('click', function () {
+  var kg = parseFloat(peso.value), cm = parseFloat(altura.value);
+  var imc = calcImc(kg, cm);
+  var p = stageProgressFromImc(imc);
+  var zona = imc < IMC_OK ? 'RAMO DÉFICIT' : (imc < 30 ? 'TRAVAMENTO' : 'RAMO CARGA');
+  var total = stage.offsetHeight - window.innerHeight;
+  var y = stage.offsetTop + p * total;
+  window.scrollTo({ top: Math.max(0, y - 2), behavior: REDUCED ? 'auto' : 'smooth' });
+  var stamp = $('#stampRef');
+  stamp.textContent = 'RHO-01/24 · IMC ' + imc.toFixed(1) + ' · ' + zona + ' · MONTAGEM ' +
+    (assemblyFromImc(imc) * 100).toFixed(0) + '%';
+  stamp.style.color = '#e879f9';
+  setTimeout(function () { stamp.style.color = ''; }, 1600);
+});
+
+$('#btnReset').addEventListener('click', function () {
+  peso.value = DEFAULTS.peso; altura.value = DEFAULTS.altura;
+  fromInputs(); beep(760);
+});
+
+var btnSound = $('#btnSound');
+btnSound.addEventListener('click', function () {
+  soundOn = !soundOn;
+  btnSound.setAttribute('aria-pressed', String(soundOn));
+  btnSound.textContent = 'Som: ' + (soundOn ? 'on' : 'off');
+  if (soundOn) { beep(1180); }
+});
+
+/* navegação por âncoras respeitosa ao sticky */
+$$('a[href^="#"]').forEach(function (a) {
+  a.addEventListener('click', function (e) {
+    var id = a.getAttribute('href');
+    if (!id || id === '#') { return; }
+    var el = document.querySelector(id);
+    if (!el) { return; }
+    e.preventDefault();
+    var top = el.getBoundingClientRect().top + (window.scrollY || window.pageYOffset);
+    if (id === '#mecanismo') { top = stage.offsetTop; }
+    window.scrollTo({ top: Math.max(0, top - 8), behavior: REDUCED ? 'auto' : 'smooth' });
+    el.setAttribute('tabindex', '-1');
+    el.focus({ preventScroll: true });
+  });
+});
+
+/* boot — pinta a bancada a partir dos valores declarados no HTML, sem aplicar snap */
+fromInputs();
+window.addEventListener('resize', function () { readScroll(); }, { passive: true });
+
+/* expõe utilitários puros para testes */
+window.RHINO = {
+  calcImc: calcImc, catOf: catOf,
+  explodeFromImc: explodeFromImc, assemblyFromImc: assemblyFromImc, loadFromImc: loadFromImc,
+  imcFromAssembly: imcFromAssembly, imcFromLoad: imcFromLoad, invSmooth: invSmooth,
+  stageProgressFromImc: stageProgressFromImc, stageFromProgress: stageFromProgress,
+  magnetic: magnetic, clamp: clamp, smooth: smooth, lerp: lerp,
+  CATS: CATS, PLATES: PLATES, IMC_MIN: IMC_MIN, IMC_MAX: IMC_MAX, IMC_OK: IMC_OK
+};
+})();
+</script>
+</body>
+</html>
